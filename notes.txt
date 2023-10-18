@@ -1,0 +1,72 @@
+
+
+
+//login page (GOT IT)
+//takes you to main page after (GOT IT)
+
+//Main page with 'choose your tournament' or 'make a new one'
+//each link takes you to different tournament page
+// links will use URL params to redirect, when making new, need to name it
+//HOW I SHOULD DO THIS
+//use URL parameters & render the body based off of the tournament, ask user if they want to join tournament first, if not already
+//in it. They should enter tournament name and then be asked to join - nope just select tournament or create a new one.
+
+//if going straight to tournament page, have to login
+
+//tournament pages have:
+//join tournament
+//start game
+//play game
+//leaderboard on side/bracket (how will I do this?)
+//show when lost/won & update
+//back to tournament page link (stays logged in)
+
+
+//add player to the certain game
+//when entering game, display the game that the user is in, use if winner is not blank, the game will be over if the winner is decided
+//once in designated game, play and put score into database, determine winner, log that into database
+//then, duplicate the player into game 3 and repeat
+//upon winner, close tournament for everyone and only display winner of the tournament
+
+
+//need to set my winner, and if winner, the inside of the game will be the winner name. 
+//then render new game!
+
+
+//next, fix outputs (see phone screenshot)
+//use CSS to format bracket
+//fix bracket entries if/else
+//how to end loop when bracket displayed
+
+//need 3 different game functions: game 1, 2, 3
+//this should eliminate race conditions
+
+
+
+
+
+
+
+
+//Things to Do:
+
+//Get Game3 Set when game 1 and 2 end --DONE!!
+////implement 'open' and closed for games -- DONE!!
+//render game3 when 1&2 closed -- DONE!!
+//interval for rendering tournament list -- DONE!!
+//format bracket-- DONE!!
+//fix when a playr leaves and comes back into tournament, previous choice blurred if they chose -- DONE!
+//fix update of game messages when a player takes a turn DONE!!
+//email reset - DONE!!
+//make signup disappear when user-- DONE!!
+
+
+
+//format game - DONE ish
+//format game messages - DONE
+//make it so loser of first game cant join again -DONE
+
+//logout button - DONE
+
+//comments and format of code -DONE
+

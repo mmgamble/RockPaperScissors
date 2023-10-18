@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <h2 id="system-message">Let's Play Rock, Paper, Scissors</h2>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- update the version number as needed -->
+    <script defer src="/__/firebase/10.4.0/firebase-app-compat.js"></script>
+    <!-- include only the Firebase features as you need -->
+    <script defer src="/__/firebase/10.4.0/firebase-auth-compat.js"></script>
+    <script
+      defer
+      src="/__/firebase/10.4.0/firebase-database-compat.js"
+    ></script>
+    <script defer src="/__/firebase/init.js?useEmulator=true"></script>
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
+    <script src="script.js"></script>
+    <link rel="stylesheet" type="text/css" href="/style.css" media="all" />
+  </head>
+  <body>
+ 
+
+    <div id="signout"></div>
+    <div id="youare" class="player"></div>
+    <div id="nextgame"></div>
+    <div id="rounds"></div>
+    <div id="signup"></div>
+    <div id="home"></div>
+    <div id="new" class="title"></div>
+    <div id="join"></div>
+    <div id="startgame"></div>
+    <div id="wait"></div>
+    <div id="game"></div>
+    <div id="roundres"></div>
+    <div id="yourchoice"></div>
+    <div id="winner"></div>
+    <div id="bracket"></div>
+
+    <div id="lower1" class="lower"></div>
+    <div id="middle1" class="middle"></div>
+    <div id="brackwinner" class="champion"></div>
+    <div id="middle2" class="middle"></div>
+    <div id="lower2" class="lower"></div>
+
+    <br />
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        function renderLogin() {
+          const loginForm = `
+              <form>
+                <h1 id="signtype">Sign Up</h1>
+                <label for="email">Email</label>
+                <input type="text" placeholder="Email" name="email" id="email" required>
+                <br>
+                <label>Password</label>
+                <input type="password" placeholder="Password" name="password" id="password" required>
+                <br>
+                <br>
+                <button type="button" id="SIsubmit" name="SIsubmit" class="SIsubmitbutton">Sign In</button>
+                <button type="button" id="SUsubmit" name="SUsubmit" class="SUsubmitbutton">Sign Up</button>
+                <br>
+                <button type="button" id="enterreset" name="enterreset" class="enterreset">Forgot Password?</button>
+              </form>
+          `;
+
+          // set login form
+          document.getElementById("signup").innerHTML = loginForm;
+
+          //event listeners for sign in and sign up
+          const SIsubmit = document.querySelector("#SIsubmit");
+          const SUsubmit = document.querySelector("#SUsubmit");
+          const resetRender = document.querySelector("#enterreset");
+          const sendreset = document.querySelector("#resetpass");
+
+          resetRender.addEventListener("click", (e) => {
+            const auth = firebase.auth();
+            //document.getElementById('signup').innerHTML = resetpassform;
+            const email = document.getElementById("email").value;
+
+            if (email !== null) {
+              auth
+                .sendPasswordResetEmail(email)
+                .then(() => {
+                  console.log("Email Reset Sent");
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            } else {
+              alert("Please Enter Email in Field!");
+            }
+          });
+
+          //sendreset.addEventListener('click', resetPassword);
+
+          SIsubmit.addEventListener("click", (e) => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            // sign in
+            firebase
+              .auth()
+              .signInWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                // successful
+                const user = userCredential.user;
+                alert("Signin successful!");
+              })
+              .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                alert(errorMessage);
+              });
+          });
+
+          SUsubmit.addEventListener("click", (e) => {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            // Sign up
+            firebase
+              .auth()
+              .createUserWithEmailAndPassword(email, password)
+              .then((userCredential) => {
+                const user = userCredential.user;
+                firebase
+                  .database()
+                  .ref("users/" + user.uid)
+                  .set({
+                    username: email,
+                  })
+                  .then(() => {
+                    alert("User created!");
+                  })
+                  .catch((error) => {
+                    alert(error.message);
+                  });
+              })
+              .catch((error) => {
+                const errorCode = error.code;
+                const errorMessage = error.message;
+                alert(errorMessage);
+              });
+          });
+        }
+
+        const logout = document.querySelector("#signout");
+
+        logout.addEventListener("click", (e) => {
+          firebase
+            .auth()
+            .signOut()
+            .then(function () {
+              console.log("Signout Successful");
+            })
+            .catch(function (error) {});
+          $("#home").empty();
+          $("#signout").empty();
+          $("#new").empty();
+          // $(".signout").innerHTML = "";
+          // const LObutton = document.getElementById('signout');
+          // LObutton.style.display = 'none';
+        });
+
+        let renderHome = () => {
+          //location.reload(); nopeee
+
+          firebase.auth().onAuthStateChanged((user) => {
+            //user logged in
+            if (user) {
+              document.getElementById(
+                "signout"
+              ).innerHTML = `<button id="signout">Logout</button>`;
+              document.getElementById("signup").innerHTML = "";
+
+              const tournamentsRef = firebase.database().ref("/tournaments");
+
+              // ON value not ONCE value to update
+              tournamentsRef.on(
+                "value",
+                (snapshot) => {
+                  const tournamentsData = snapshot.val();
+                  console.log("rendering tournaments home page");
+                  if (tournamentsData) {
+                    let i = 1;
+                    $("#home").empty(); //clear home
+
+                    for (const tournamentId in tournamentsData) {
+                      if (
+                        Object.hasOwnProperty.call(
+                          tournamentsData,
+                          tournamentId
+                        )
+                      ) {
+                        const tournament = tournamentsData[tournamentId];
+                        const id = tournament.id;
+
+                        $("#home").append(
+                          `<button class="jointourney" data-id="${id}">Enter Tournament ${i}</button><br><br>`
+                        );
+                        i++;
+                      }
+                    }
+
+                    // join a tournament
+                    $("#home").on("click", ".jointourney", (e) => {
+                      const tournamentId = $(e.currentTarget).data("id");
+                      document.location.pathname = `/tournaments/${tournamentId}`;
+                    });
+                  } else {
+                    $("#home").html(
+                      "<br>No tournaments found. Create a new one below."
+                    );
+                  }
+                },
+                (error) => {
+                  console.error("Error getting tournaments:", error);
+                }
+              );
+
+              $("#new").html(`<button id="newTourney">New Tourney</button>`);
+              $("#newTourney").on("click", () => {
+                //method 1:
+                console.log("New Tourney Clicked");
+                let newRef = firebase.database().ref("/tournaments").push();
+                console.log("newRef pushed");
+
+                //tournament object
+                newRef
+                  .set({
+                    id: newRef.key,
+                    playercount: 0,
+                    games: {
+                      game1: { status: "OPEN" },
+                      game2: { status: "OPEN" },
+                      game3: {},
+                    },
+                  })
+                  .then(() => {
+                    document.location.pathname = `/tournaments/${newRef.key}`;
+                  });
+              });
+            }
+            //user not logged in
+            else {
+              renderLogin();
+              console.log("not logged in");
+            }
+          });
+        };
+
+        const renderGame = (
+          tID,
+          gameit,
+          currentPlayerPrefix,
+          opponentPrefix
+        ) => {
+          firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+              const game = `
+          <div id="${currentPlayerPrefix}"></div>
+          <div id="${opponentPrefix}"></div>
+          <br>
+          <div id="${currentPlayerPrefix}"></div>
+          <div id="${opponentPrefix}"></div>
+          <br>
+          <div id="stupid" class="hidden">
+            Choose Your Fighter:
+            <button class="playerchoice" id="rock">Rock</button>
+            <button class="playerchoice" id="paper">Paper</button>
+            <button class="playerchoice" id="scissors">Scissors</button>
+          </div>
+          <br>
+        `;
+
+              document.getElementById("game").innerHTML = game;
+              document.getElementById("join").innerHTML = "";
+
+              let currentPlayer = null; //player1, 2,3 or 4
+              const databaseRef = firebase
+                .database()
+                .ref(`tournaments/${tID}/`);
+              const gameRef = databaseRef.child(`games/${gameit}`);
+              const playersRef = gameRef.child("players");
+              const choicesRef = gameRef.child("choices");
+              const scoresRef = gameRef.child("scores");
+              const winnerRef = gameRef.child("winner");
+              //const options = ["rock", "paper", "scissors"];
+              const playerChoiceButtons =
+                document.querySelectorAll(".playerchoice");
+
+              let playerScore = 0;
+              let opponentScore = 0;
+
+              if (gameit === "game3") {
+                $("#nextgame").html(
+                  `<h3>You Have Made it to The Championship Game.</h3>`
+                );
+              }
+
+              //const winnerInterval = setInterval(() => {
+              const renderWinnerScreen = (winner) => {
+                $("#join").empty();
+                $("#rounds").empty();
+                $("#roundres").empty();
+                $("#yourchoice").empty();
+
+                //document.getElementById('join').innerHTML = ``;
+                //document.getElementById('rounds').innerHTML = ``;
+                //document.getElementById('roundres').innerHTML = ``;
+                //document.getElementById('yourchoice').innerHTML = ``;
+
+                //does jquery work
+                if (winner === "player1") {
+                } else if (winner === "player2") {
+                  $("#nextgame").html(`You Lost!`);
+                  $("#game").empty();
+                  //document.querySelector("#game").innerHTML = ``;
+                }
+                if (gameit === "game1" || gameit === "game2") {
+                  location.reload();
+                }
+              };
+              //},2000);
+
+              //const interval = setInterval(() => {
+              scoresRef.on("value", (snapshot) => {
+                const scores = snapshot.val() || {};
+                const winner = scores.winner;
+
+                if (
+                  winner === `${currentPlayerPrefix}` ||
+                  winner === `${opponentPrefix}`
+                ) {
+                  document.getElementById(
+                    "game"
+                  ).innerHTML = `<h3>${winner} Won This Game</h3>`;
+                  setGame3(tID);
+                  //2 render brackets?
+                  renderBracket(tID);
+                  gameRef.child("status").set("CLOSED");
+                  renderWinnerScreen(winner);
+                } else {
+                  console.log("render game here");
+                }
+              });
+              //}, 1000);
+
+              const interval = setInterval(() => {
+                choicesRef.on("value", (snapshot) => {
+                  const choices = snapshot.val();
+                  if (choices) {
+                    //const playerChoice = choices.currentPlayerPrefix;
+                    if (
+                      choices &&
+                      currentPlayer === `${opponentPrefix}` &&
+                      choices[`${opponentPrefix}`]
+                    ) {
+                      console.log("player2 went");
+                      disableChoiceButtons();
+                      document.getElementById(
+                        "yourchoice"
+                      ).innerHTML = `<h3>You Chose: ${
+                        choices[`${opponentPrefix}`]
+                      }</h3>`;
+                      document.getElementById(
+                        "roundres"
+                      ).innerHTML = `Waiting for Other Player's Choice`;
+                    }
+                    if (
+                      choices &&
+                      currentPlayer === `${currentPlayerPrefix}` &&
+                      choices[`${currentPlayerPrefix}`]
+                    ) {
+                      console.log("player1 went");
+                      disableChoiceButtons();
+                      document.getElementById(
+                        "yourchoice"
+                      ).innerHTML = `<h3>You Chose: ${
+                        choices[`${currentPlayerPrefix}`]
+                      }</h3>`;
+                      document.getElementById(
+                        "roundres"
+                      ).innerHTML = `Waiting for Other Player's Choice`;
+                    }
+                  } else {
+                    document.getElementById("roundres").innerHTML = ``;
+                    document.getElementById("yourchoice").innerHTML = ``;
+                  }
+                });
+              }, 1000);
+
+              const startGame = () => {
+                //document.getElementById('nextgame').innerHTML =``;
+                document.querySelector("#system-message").innerHTML =
+                  "Welcome to the Tournament";
+                enableChoiceButtons();
+
+                playerChoiceButtons.forEach((button) => {
+                  button.addEventListener("click", (evt) => {
+                    if (
+                      currentPlayer === `${currentPlayerPrefix}` ||
+                      currentPlayer === `${opponentPrefix}`
+                    ) {
+                      const playerChoice = evt.currentTarget.getAttribute("id");
+                      choicesRef.child(currentPlayer).set(playerChoice);
+                      //alert(playerChoice);
+                      document.getElementById("roundres").innerHTML = ``;
+
+                      //const interval = setInterval(() => {
+                      choicesRef.once("value", (snapshot) => {
+                        const choices = snapshot.val();
+                        if (
+                          choices &&
+                          choices[`${currentPlayerPrefix}`] &&
+                          choices[`${opponentPrefix}`]
+                        ) {
+                          document.getElementById("roundres").innerHTML = ``;
+                          //disableChoiceButtons();
+                          const player1Choice =
+                            choices[`${currentPlayerPrefix}`];
+                          const player2Choice = choices[`${opponentPrefix}`];
+                          calculateRoundResult(player1Choice, player2Choice);
+                          console.log(`Player 1 Choice: ${player1Choice}`);
+                          console.log(`Player 2 Choice: ${player2Choice}`);
+                          //document.getElementById('rounds').innerHTML = `${roundResult}`;
+                          choicesRef.remove();
+                        } else {
+                          enableChoiceButtons();
+                          document.getElementById("roundres").innerHTML = ``;
+                          console.log("New Round");
+                        }
+                        scoresRef.once("value", (snapshot) => {
+                          const scores = snapshot.val();
+                          if (
+                            scores &&
+                            (scores[`${currentPlayerPrefix}`] >= 2 ||
+                              scores[`${opponentPrefix}`] >= 2)
+                          ) {
+                            console.log("SCORES ARE AT 2!!!!");
+                            determineGameResult();
+                            //const gameResult = determineGameResult();
+                            //displayGameResult(gameResult);
+                            clearInterval(interval);
+                          } else {
+                            startGame();
+                          }
+                        });
+                      });
+                      //}, 2000);
+                    }
+                  });
+                });
+              };
+
+              const enableChoiceButtons = () => {
+                playerChoiceButtons.forEach((button) => {
+                  button.disabled = false;
+                });
+              };
+
+              const disableChoiceButtons = () => {
+                playerChoiceButtons.forEach((button) => {
+                  button.disabled = true;
+                });
+              };
+
+              const calculateRoundResult = (player1Choice, player2Choice) => {
+                console.log(`player 1 choice: ${player1Choice}`);
+                console.log(`player 2 choice: ${player2Choice}`);
+
+                console.log("calculate round result");
+                if (
+                  (player1Choice === "rock" && player2Choice === "scissors") ||
+                  (player1Choice === "paper" && player2Choice === "rock") ||
+                  (player1Choice === "scissors" && player2Choice === "paper")
+                ) {
+                  playerScore += 1;
+                  console.log("adding to playerScore");
+                  scoresRef.child(currentPlayerPrefix).set(playerScore);
+                  document.getElementById(
+                    "rounds"
+                  ).innerHTML = `${currentPlayerPrefix} Won This Round`;
+                } else if (
+                  (player1Choice === "scissors" && player2Choice === "rock") ||
+                  (player1Choice === "rock" && player2Choice === "paper") ||
+                  (player1Choice === "paper" && player2Choice === "scissors")
+                ) {
+                  opponentScore += 1;
+                  console.log("adding to opponentScore");
+                  scoresRef.child(opponentPrefix).set(opponentScore);
+                  document.getElementById(
+                    "rounds"
+                  ).innerHTML = `${opponentPrefix} Won This Round`;
+                } else {
+                  console.log("This round was a tie");
+                  document.getElementById("rounds").innerHTML =
+                    "This Round Was a Tie. Play Again.";
+                }
+              };
+
+              const determineGameResult = () => {
+                if (playerScore > opponentScore) {
+                  scoresRef.child("winner").set(currentPlayerPrefix);
+                  gameRef.child("winner").set(currentPlayerPrefix);
+                  // return "Player 1 Wins the Game!";
+                  if (currentPlayer === currentPlayerPrefix) {
+                    renderWinnerScreen("player1");
+                  } else if (currentPlayer === opponentPrefix) {
+                    renderWinnerScreen("player2");
+                  }
+                } else if (playerScore < opponentScore) {
+                  scoresRef.child("winner").set(opponentPrefix);
+                  gameRef.child("winner").set(opponentPrefix);
+                  if (currentPlayer === opponentPrefix) {
+                    renderWinnerScreen("player1");
+                  } else if (currentPlayer === opponentPrefix) {
+                    renderWinnerScreen("player2");
+                  }
+                  //return "Player 2 Wins the Game!";
+                } else {
+                  console.log("Cannot determine winner");
+                }
+              };
+
+              scoresRef.on("value", (snapshot) => {
+                const scores = snapshot.val() || {};
+                const currentPlayerElement =
+                  document.getElementById(currentPlayerPrefix);
+                const opponentElement = document.getElementById(opponentPrefix);
+
+                if (currentPlayerElement) {
+                  if (scores[`${currentPlayerPrefix}`] !== undefined) {
+                    currentPlayerElement.innerHTML = `${currentPlayerPrefix} Score: ${
+                      scores[`${currentPlayerPrefix}`]
+                    }`;
+                    playerScore = scores[`${currentPlayerPrefix}`];
+                  } else {
+                    document.getElementById(
+                      `${currentPlayerPrefix}`
+                    ).innerHTML = ``;
+                  }
+                }
+                if (opponentElement) {
+                  if (scores[`${opponentPrefix}`] !== undefined) {
+                    opponentElement.innerHTML = `${opponentPrefix} Score: ${
+                      scores[`${opponentPrefix}`]
+                    }`;
+                    opponentScore = scores[`${opponentPrefix}`];
+                  } else {
+                    document.getElementById(`${opponentPrefix}`).innerHTML = ``;
+                  }
+                }
+              });
+
+              // check for 2 players
+              //const interval2 = setInterval(() => {
+              if (playersRef) {
+                //console.log(`${gameit}`);
+                playersRef.once("value", (snapshot) => {
+                  const players = snapshot.val();
+                  const currentUserUID = firebase.auth().currentUser.uid;
+                  if (
+                    players &&
+                    players[`${currentPlayerPrefix}`] &&
+                    players[`${opponentPrefix}`]
+                  ) {
+                    enableChoiceButtons();
+                    if (players[`${currentPlayerPrefix}`] === currentUserUID) {
+                      currentPlayer = `${currentPlayerPrefix}`;
+                      document.getElementById(
+                        "youare"
+                      ).innerHTML = `You are ${currentPlayer}`;
+                      //console.log(currentPlayer);
+                    } else if (
+                      players[`${opponentPrefix}`] === currentUserUID
+                    ) {
+                      currentPlayer = `${opponentPrefix}`;
+                      document.getElementById(
+                        "youare"
+                      ).innerHTML = `You are ${currentPlayer}`;
+                    }
+                    document.getElementById("wait").innerHTML = "";
+                    startGame();
+                  } else {
+                    disableChoiceButtons();
+                    const waiting = `<br>....Waiting for another player`;
+                    document.getElementById("wait").innerHTML = waiting;
+                  }
+                });
+              }
+              //}, 2000);
+            } else {
+              console.log("no user");
+            }
+          });
+        };
+
+        const setGame3 = (tID) => {
+          const databaseRef = firebase
+            .database()
+            .ref(`tournaments/${tID}/games`);
+          const game1Ref = databaseRef.child("game1");
+          const game2Ref = databaseRef.child("game2");
+          const game3Ref = databaseRef.child("game3");
+          const game3PlayersRef = game3Ref.child("players");
+
+          const winners = {}; 
+
+          //alert("in game 3 set)");
+          const processGame = (game1Ref, game2Ref) => {
+            //console.log("in processing game");
+            game1Ref.once("value", (snapshot) => {
+              const game1 = snapshot.val();
+              if (game1) {
+                //console.log("setting game winner");
+                const winnerKey = game1.winner; 
+                if (winnerKey) {
+                  // find uid
+                  game1Ref.child("players").once("value", (playersSnapshot) => {
+                    const players = playersSnapshot.val();
+                    if (players && players[winnerKey]) {
+                      const winnerUID = players[winnerKey]; // UID
+                      winners[winnerKey] = winnerUID;
+                    }
+                    game3PlayersRef.update(winners);
+                    //}
+                  });
+                }
+              } else {
+                console.log("no game 2");
+              }
+            });
+            game2Ref.once("value", (snapshot) => {
+              const game2 = snapshot.val();
+              if (game2) {
+                //console.log("setting game winner");
+                const winnerKey = game2.winner;
+                if (winnerKey) {
+                  game2Ref.child("players").once("value", (playersSnapshot) => {
+                    const players = playersSnapshot.val();
+                    if (players && players[winnerKey]) {
+                      const winnerUID = players[winnerKey]; // Winner's UID
+                      winners[winnerKey] = winnerUID;
+                    }
+
+                    // If we have processed all games, update the players in game3
+                    //if (gameIndex === 1) {
+                    game3PlayersRef.update(winners);
+                    //}
+                  });
+                }
+              } else {
+                console.log("no game 1");
+              }
+            });
+          };
+
+          // Process each game and update the winners object
+          game3Ref.once("value", (snapshot) => {
+            const game3 = snapshot.val();
+            if (game3) {
+              //gameRefs.forEach((gameRef, index) => {
+              console.log("game 3 exists, processing game");
+              processGame(game1Ref, game2Ref);
+              //});
+            } else {
+              initialGame3 = { winners: {} };
+              game3Ref.set(initialGame3, (error) => {
+                if (error) {
+                  console.error("Error initializing game3:", error);
+                } else {
+                  //console.log('game3 initialized successfully');
+
+                  //console.log("Game 3 initialized, processing game");
+                  processGame(game1Ref, game2Ref);
+                }
+              });
+            }
+          });
+        };
+
+        let renderBracket = (tID) => {
+          const tournamentRef = firebase.database().ref(`/tournaments/${tID}`);
+          const playersref = tournamentRef.child("players");
+          const gameRef = tournamentRef.child("games");
+          const games1Ref = gameRef.child("game1");
+          const games2Ref = gameRef.child("game2");
+          const games3Ref = gameRef.child("game3");
+          const game1winner = games1Ref.child("winner");
+          const game2winner = games2Ref.child("winner");
+
+          playersref.on("value", (snapshot) => {
+            const players = snapshot.val();
+            if (playersref) {
+              document.getElementById(
+                "lower1"
+              ).innerHTML = `<p>Player 1  VS.  Player 2</p> 
+              `;
+            }
+          });
+
+          playersref.on("value", (snapshot) => {
+            const players = snapshot.val();
+            if (playersref) {
+              document.getElementById("lower2").innerHTML = `
+              <p>Player 3  VS.  Player 4</p>`;
+            }
+          });
+
+          if (games1Ref) {
+            games1Ref.on("value", (snapshot) => {
+              const game = snapshot.val();
+              const winner = game.winner;
+              if (winner) {
+                document.getElementById(
+                  "middle1"
+                ).innerHTML = `<p>|</p>Winner: ${game.winner} `;
+              } else {
+                document.getElementById(
+                  "middle1"
+                ).innerHTML = `<p>|</p>Game in Progress`;
+              }
+            });
+          } else {
+            document.getElementById(
+              "middle1"
+            ).innerHTML = `<p>|</p>Waiting For More Players`;
+          }
+
+          games2Ref.on("value", (snapshot) => {
+            const game = snapshot.val();
+            if (game) {
+              if (game.winner) {
+                console.log(game.winner);
+                const winner = game.winner;
+                document.getElementById(
+                  "middle2"
+                ).innerHTML = `  Winner: ${game.winner}<p>|</p>`;
+              } else {
+                document.getElementById(
+                  "middle2"
+                ).innerHTML = `Game in Progress<p>|</p>`;
+              }
+            } else {
+              document.getElementById(
+                "middle2"
+              ).innerHTML = `Waiting For More Players<p>|</p>`;
+            }
+          });
+
+          games3Ref.on("value", (snapshot) => {
+            const game = snapshot.val();
+            if (game) {
+              const winner = game.winner;
+              console.log(winner);
+              if (winner) {
+                document.getElementById(
+                  "brackwinner"
+                ).innerHTML = `<p>|</p><h3>Champion: ${game.winner}</h3><p>|</p>`;
+              } else {
+                document.getElementById(
+                  "brackwinner"
+                ).innerHTML = `<p>|</p>No Champion Crowned Yet!<p>|</p>`;
+              }
+            } else {
+              document.getElementById(
+                "brackwinner"
+              ).innerHTML = `<p>|</p>No Champion Crowned Yet!<p>|</p>`;
+            }
+          });
+
+          //lower1
+          //middle2
+          //<div id="winner"></div>
+          //<div id="middle2"></div>
+          //<div id="lower2"></div>
+        };
+
+        let renderPlayers = (tID) => {
+          const tournamentRef = firebase.database().ref(`/tournaments/${tID}`);
+          const joinButton = document.getElementById("join");
+          let check = 0;
+
+          //check for user, no timeout error
+          firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+              const userid = user.uid;
+              let userInGame = false;
+
+              // are you already in a game?
+              tournamentRef.on("value", (snapshot) => {
+                const tournamentData = snapshot.val();
+
+                console.log("Finding Game");
+                if (tournamentData) {
+                  // go through all games
+                  for (const gameKey in tournamentData.games) {
+                    if (
+                      Object.hasOwnProperty.call(tournamentData.games, gameKey)
+                    ) {
+                      const game = tournamentData.games[gameKey];
+                      // check if in game
+                      if (
+                        game.players &&
+                        Object.values(game.players).includes(userid)
+                      ) {
+                        userInGame = true;
+
+                        // User is in this game, then render
+                        check = 1;
+                        console.log(check);
+
+                        if (gameKey === "game1" && game.status === "OPEN") {
+                          console.log("entering game1");
+                          renderGame(tID, gameKey, "player1", "player2");
+                        } else if (
+                          gameKey === "game2" &&
+                          game.status === "OPEN"
+                        ) {
+                          console.log("entering game2");
+                          renderGame(tID, gameKey, "player3", "player4");
+                        } else if (gameKey === "game3") {
+                          const playersGame3 = game.players;
+                          const playerKeys = Object.keys(playersGame3);
+                          console.log("entering game 3");
+                          //render game 3 with players
+                          renderGame(
+                            tID,
+                            gameKey,
+                            playerKeys[0],
+                            playerKeys[1]
+                          );
+                        } else {
+                          //annoyingly complicated to find player, shoulda store
+                          for (const gameKey in tournamentData.games) {
+                            if (tournamentData.games.hasOwnProperty(gameKey)) {
+                              const game = tournamentData.games[gameKey];
+
+                              // Search in game1
+                              for (const key in game.players) {
+                                if (
+                                  game.players.hasOwnProperty(key) &&
+                                  game.players[key] === userid
+                                ) {
+                                  document.getElementById(
+                                    "youare"
+                                  ).innerHTML = `You are: ${key}`;
+                                }
+                              }
+                            }
+                          }
+                          renderBracket(tID);
+                          console.log("None are open");
+                        }
+                      } else {
+                        console.log(check);
+                        console.log("user is not in any game");
+                      }
+                    }
+                  }
+                } else {
+                  console.log("no tournament data");
+                }
+              });
+
+              // check = 0, join new game
+              if (userInGame) {
+                console.log(
+                  "User already in game, do not allow to join again."
+                );
+              } else {
+                console.log("Entering New Game");
+                tournamentRef.on("value", (snapshot) => {
+                  const tournamentData = snapshot.val();
+                  if (tournamentData) {
+                    const playercount = tournamentData.playercount;
+
+                    if (
+                      (playercount === 4 && tournamentData.game3) ||
+                      (playercount === 2 && tournamentData.game3)
+                    ) {
+                      let youlost = `You lost your game`;
+                      joinButton.innerHTML = youlost;
+                      //NEED A MESSAGE FOR INITIAL GAME & A DIFFERENT MESSAGE FOR WHEN THE GAME IS LOST & PLAYER IS NOT IN A GAME
+                    } else if (playercount === 4) {
+                      let fullgame = `This Tournament is Full. Please choose another`;
+                      joinButton.innerHTML = fullgame;
+                    } else {
+                      let entergame = `<button id="entergame">Join Game</button>`;
+                      joinButton.innerHTML = entergame;
+
+                      //join game
+                      const entergameclick =
+                        document.getElementById("entergame");
+                      entergameclick.addEventListener("click", () => {
+                        const playernum = playercount + 1;
+                        const playerkey = `player${playernum}`;
+                        const playerobj = {};
+                        playerobj[playerkey] = user.uid;
+
+                        if (playercount === 0 || playercount === 1) {
+                          console.log("made it here");
+                          // game1
+                          const gamesref = tournamentRef.child("games");
+                          const gameusersref = gamesref.child("game1");
+                          const gameplayers = gameusersref.child("players");
+                          gameplayers.update(playerobj);
+                          //tournamentData.players.update(playerobj);
+                          alert("tournament joined");
+                          //these keys might be wrong - maybe dont need them?
+                          //rendergame(tID, 0);
+                        } else if (playercount === 2 || playercount === 3) {
+                          // game2
+                          const gamesref = tournamentRef.child("games");
+                          const gameusersref = gamesref.child("game2");
+                          const gameplayers = gameusersref.child("players");
+                          gameplayers.update(playerobj);
+                          //tournamentData.players.set(playerobj);
+                          alert("tournament joined");
+                          //these keys might be wrong
+                          //rendergame(tID, 1);
+                        } else {
+                          console.log("Undef playercount");
+                        }
+                        // user+1 to game
+                        // Update player count by 1
+
+                        tournamentRef.update({ playercount: playercount + 1 });
+                      });
+                    }
+                  } else {
+                    console.log("This ain't workin, where's my tourney???");
+                  }
+                });
+              }
+            }
+          });
+        };
+
+        //render dat tournamentttt thank god
+        let renderTourney = (tID) => {
+          firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+              console.log("Rendering Tourney");
+              $("#new").html("Loading...");
+
+              firebase
+                .database()
+                .ref(`/tournaments`)
+                .child(tID)
+                .on("value", (ss) => {
+                  const tournamentData = ss.val();
+
+                  if (tournamentData && tournamentData.id) {
+                    //const tournamentName = tournamentData.name;
+                    //Tournament Name: ${tournamentName}
+                    $("#new").html(``);
+                    renderPlayers(tID);
+                    $("home").html(` `);
+                  } else {
+                    $("#new").html("Tournament is no longer active.");
+                  }
+                });
+            }
+          });
+        };
+
+        //set page
+        let pn = document.location.pathname;
+        let parts = pn.split("/");
+        if (parts.length < 3) {
+          console.log("rendering home, bad pathway");
+          renderHome();
+        } else {
+          if (parts[1] == "tournaments" && parts[2].length > 1) {
+            renderTourney(parts[2]);
+          } else {
+            console.log("Not valid tourney");
+            renderHome();
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

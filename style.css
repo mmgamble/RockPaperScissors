@@ -1,0 +1,40 @@
+
+
+.middle{
+  padding-left: 50px;
+}
+
+.champion{
+  margin-left: 100px;
+}
+
+.title{
+  align-items: center;
+}
+
+.player{
+  width: 130px;
+  border-width:2px;
+  border-style:solid;
+  border-color:black;
+}
+/*.hidden {
+  display: none;
+}
+
+.tournamentlist{
+  display: none;
+  color: blue;
+}
+
+.signin{
+  visibility: hidden;
+}
+
+.signup{
+  visibility: visible;
+}
+
+.newtourney{
+  visibility: hidden;
+}*/

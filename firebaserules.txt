@@ -1,0 +1,17 @@
+{
+  /* Visit https://firebase.google.com/docs/database/security to learn more about security rules. */
+  "rules": {
+    ".read": false,
+    ".write": false,
+      "tournaments":{
+        ".read":"auth.uid != null",
+          ".write":"auth.uid != null",
+             
+            
+      },
+        "users":{
+          ".read":"auth.uid != null",
+            ".write":"auth.uid != null"
+        }
+  }
+}
